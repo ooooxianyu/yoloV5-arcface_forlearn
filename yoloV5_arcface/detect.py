@@ -235,16 +235,17 @@ def detect(save_img=False):
                         # print(max_n,max_f)
                         if (max_f>0.44):
                             label = max_n[:-4]
+                    if opt.open_rf:
                     # pred real or fack
-                    for model_name in os.listdir("weights/anti_spoof_models"):
-                        # print(model_test.predict(img, os.path.join(model_dir, model_name)))
+                        for model_name in os.listdir("weights/anti_spoof_models"):
+                            # print(model_test.predict(img, os.path.join(model_dir, model_name)))
 
-                        prediction += pred_model.predict(rf_img, os.path.join("weights/anti_spoof_models", model_name))
-                    rf_label = np.argmax(prediction)
-                    value = prediction[0][rf_label] / 2
-                    print(rf_label,value)
-                    if rf_label==1 and value>0.90: label+="_real"
-                    else:label+="_fake"
+                            prediction += pred_model.predict(rf_img, os.path.join("weights/anti_spoof_models", model_name))
+                        rf_label = np.argmax(prediction)
+                        value = prediction[0][rf_label] / 2
+                        print(rf_label,value)
+                        if rf_label==1 and value>0.90: label+="_real"
+                        else:label+="_fake"
                     plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
             # Print time (inference + NMS)
@@ -295,6 +296,7 @@ if __name__ == '__main__':
     parser.add_argument('--classes', nargs='+', type=int, help='filter by class')
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
+    parser.add_argument('--open_rf', default=1, help='if open real/fake 1 0 ')
     opt = parser.parse_args()
     opt.img_size = check_img_size(opt.img_size)
     print(opt)

@@ -4,7 +4,6 @@
     <list default="true" id="e7f0ee70-ca7d-4d8e-b227-a488af3a28a2" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/coco128.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/data/coco128.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/detect.py" beforeDir="false" afterPath="$PROJECT_DIR$/detect.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -48,6 +47,7 @@
       <updated>1594623415923</updated>
       <workItem from="1594623460926" duration="1985000" />
       <workItem from="1595054555836" duration="377000" />
+      <workItem from="1595055278259" duration="60000" />
     </task>
     <servers />
   </component>
