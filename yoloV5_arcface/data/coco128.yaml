@@ -25,9 +25,8 @@
 #        'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear',
 #        'hair drier', 'toothbrush']
 
-train: D:/AIstudyCode/data/CelebA/images/train/
-val: D:/AIstudyCode/data/CelebA/images/test/
-
+train: D:/AIstudyCode/data/CelebA/images/train//test/
+val: D:/AIstudyCode/data/CelebA/images
 # number of classes
 nc: 1
 

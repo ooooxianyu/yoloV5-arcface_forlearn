@@ -13,6 +13,9 @@ from utils import google_utils
 from utils.datasets import *
 from utils.utils import *
 
+from silentFace_model.predict_net import *
+from silentFace_model.predict_net import AntiSpoofPredict
+
 def cv2_letterbox_image(image, expected_size):
     ih, iw = image.shape[0:2]
     ew, eh = expected_size,expected_size
@@ -111,10 +114,9 @@ def detect(save_img=False):
     half = device.type != 'cpu'  # half precision only supported on CUDA
 
     # Load model
-    # google_utils.attempt_download(weights) # 尝试下载权重包
+
     model = torch.load(weights, map_location=device)['model'].float()  # load to FP32
-    # torch.save(torch.load(weights, map_location=device), weights)  # update model if SourceChangeWarning
-    # model.fuse()
+
     model.to(device).eval()
 
     arcface_model = resnet_face18(False)
@@ -124,18 +126,13 @@ def detect(save_img=False):
     arcface_model.load_state_dict(torch.load('weights/resnet18_110.pth'), strict=False)
     arcface_model.to(torch.device("cuda")).eval()
 
+    pred_model = AntiSpoofPredict(0)
+
     if half:
         model.half()  # to FP16
-        #arcface_model.half()
-    features = get_featuresdict(arcface_model, dir)
-    # Second-stage classifier
-    # classify = False
-    # if classify:
-    #     modelc = torch_utils.load_classifier(name='resnet101', n=2)  # initialize
-    #     modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model'])  # load weights
-    #     modelc.to(device).eval()
 
-    # Set Dataloader 加载数据
+    features = get_featuresdict(arcface_model, dir)
+
     vid_path, vid_writer = None, None
     if webcam:
         view_img = True
@@ -160,22 +157,15 @@ def detect(save_img=False):
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
-        # print("1",img.shape) # C * H * W
         if img.ndimension() == 3:
             img = img.unsqueeze(0)
-        # print("2",img.shape) # N * C * H * W
         # Inference
         t1 = torch_utils.time_synchronized()
         pred = model(img, augment=opt.augment)[0]
-        # print(pred.shape) n* NUM_BOX * 85(NUM_CLASS+C+BOX)
 
         # Apply NMS 执行nms筛选boxes
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
         t2 = torch_utils.time_synchronized()
-
-        # Apply Classifier
-        # if classify:
-        #     pred = apply_classifier(pred, modelc, img, im0s)
 
         # Process detections
         for i, det in enumerate(pred):  # detections per image
@@ -186,17 +176,14 @@ def detect(save_img=False):
 
             save_path = str(Path(out) / Path(p).name)
             s += '%gx%g ' % img.shape[2:]  # print string
-            # print("1",im0.shape) # h * w * c
+
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  #  normalization gain whwh
-            # print("2", gn) # w h w h
-            # print("3", gn.shape) # 4
+
 
             if det is not None and len(det): # 假如预测到有目标（盒子存在）
                 # Rescale boxes from img_size to im0 size 还原盒子在原图上的位置
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
-                # print(det.shape) # 1*6
-                # print(det) # x1 y1 x2 y2 cls class
-                # im0[y0:y1, x0:x1]
+
                 # Print results 打印box的结果信息
                 for c in det[:, -1].unique():
                     n = (det[:, -1] == c).sum()  # detections per class
@@ -204,14 +191,16 @@ def detect(save_img=False):
 
                 # Write results
                 for *xyxy, conf, cls in det: # x1 y1 x2 y2 cls class
-
+                    prediction = np.zeros((1, 3))
+                    # crop
                     face_img = im0[int(xyxy[1]):int(xyxy[3]),int(xyxy[0]):int(xyxy[2])]
+                    # rf_size
+                    rf_img = cv2.resize(face_img, (80, 80))
 
+                    # recognition
                     face_img = cv2.resize(face_img,(128, 128))
 
                     face_img = cv2.cvtColor(face_img,cv2.COLOR_BGR2GRAY)
-
-                    #face_img = cv2_letterbox_image(face_img, 128)
 
                     face_img = np.dstack((face_img, np.fliplr(face_img)))
 
@@ -224,8 +213,7 @@ def detect(save_img=False):
 
                     face_data = torch.from_numpy(face_img)
                     face_data = face_data.to(torch.device("cuda"))
-                    #print(face_data.shape)
-                    #exit()
+
                     _output = arcface_model(face_data)  # 获取特征
                     _output = _output.data.cpu().numpy()
 
@@ -234,8 +222,6 @@ def detect(save_img=False):
 
                     _feature = np.hstack((fe_1, fe_2))
 
-                    #_feature = _feature.reshape(1024)
-                    # label = '%s %.2f' % (names[int(cls)], conf)
                     label = "none"
                     list = os.listdir(dir)
                     max_f = 0
@@ -249,6 +235,16 @@ def detect(save_img=False):
                         # print(max_n,max_f)
                         if (max_f>0.44):
                             label = max_n[:-4]
+                    # pred real or fack
+                    for model_name in os.listdir("weights/anti_spoof_models"):
+                        # print(model_test.predict(img, os.path.join(model_dir, model_name)))
+
+                        prediction += pred_model.predict(rf_img, os.path.join("weights/anti_spoof_models", model_name))
+                    rf_label = np.argmax(prediction)
+                    value = prediction[0][rf_label] / 2
+                    print(rf_label,value)
+                    if rf_label==1 and value>0.90: label+="_real"
+                    else:label+="_fake"
                     plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
             # Print time (inference + NMS)
