@@ -16,6 +16,10 @@ from yoloV5_face.utils.utils import *
 from silentFace_model.predict_net import *
 from silentFace_model.predict_net import AntiSpoofPredict
 
+#训练时候train保存的路径和yoloV5_face/model以及yoloV5_face/utils 同一路径，所以main加载权重的时候会出现路径错误，加上这段就好了。
+import sys
+sys.path.append("./yoloV5_face")
+
 def cv2_letterbox_image(image, expected_size):
     ih, iw = image.shape[0:2]
     ew, eh = expected_size,expected_size
